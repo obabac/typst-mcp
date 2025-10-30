@@ -7,7 +7,14 @@ from PIL import Image as PILImage
 import io
 import numpy as np
 
-temp_dir = tempfile.mkdtemp()
+# Allow custom temp directory via environment variable
+temp_dir_env = os.environ.get("TYPST_MCP_TEMP_DIR")
+if temp_dir_env:
+    temp_dir = temp_dir_env
+    # Create directory if it doesn't exist
+    os.makedirs(temp_dir, exist_ok=True)
+else:
+    temp_dir = tempfile.mkdtemp()
 
 mcp = FastMCP("Typst MCP Server")
 
@@ -50,10 +57,24 @@ def check_external_dependencies():
         )
 
 # load the typst docs JSON file
-raw_typst_docs = ""
-with open(os.path.join(os.path.dirname(__file__), "typst-docs", "main.json"), "r", encoding="utf-8") as f:
-    raw_typst_docs = f.read()
-typst_docs = json.loads(raw_typst_docs)
+typst_docs = []
+typst_docs_path = os.path.join(os.path.dirname(__file__), "typst-docs", "main.json")
+try:
+    with open(typst_docs_path, "r", encoding="utf-8") as f:
+        raw_typst_docs = f.read()
+    typst_docs = json.loads(raw_typst_docs)
+except FileNotFoundError:
+    print(f"Warning: Typst documentation file not found at {typst_docs_path}")
+    print("Documentation-related tools will not be available.")
+    print("To generate the documentation, run:")
+    print("  cargo run --package typst-docs -- --assets-dir typst-docs --out-file typst-docs/main.json")
+    print("See README.md for more details.")
+except json.JSONDecodeError as e:
+    print(f"Warning: Failed to parse Typst documentation JSON file: {e}")
+    print("Documentation-related tools will not be available.")
+except Exception as e:
+    print(f"Warning: Error loading Typst documentation: {e}")
+    print("Documentation-related tools will not be available.")
 
 def list_child_routes(chapter: dict) -> list[dict]:
     """
@@ -79,6 +100,11 @@ def list_docs_chapters() -> str:
     The LLM should use this in the beginning to get the list of chapters and then decide which chapter to read.
     """
     print("mcp.resource('docs://chapters') called")
+    if not typst_docs:
+        return json.dumps({
+            "error": "Typst documentation not available",
+            "message": "The typst-docs/main.json file is missing. Please generate it first. See README.md for instructions."
+        })
     chapters = []
     for chapter in typst_docs:
         chapters.append({
@@ -100,6 +126,12 @@ def get_docs_chapter(route: str) -> str:
     instead of the full content to avoid overwhelming responses.
     """
     print(f"mcp.resource('docs://chapters/{route}') called")
+    
+    if not typst_docs:
+        return json.dumps({
+            "error": "Typst documentation not available",
+            "message": "The typst-docs/main.json file is missing. Please generate it first. See README.md for instructions."
+        })
 
     # the rout could also be in the form of "____reference____layout____colbreak" -> "/reference/layout/colbreak"
     # replace all underscores with slashes

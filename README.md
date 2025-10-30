@@ -30,19 +30,43 @@ The server provides the following tools:
 
 ## Getting Started
 
-- Clone this repository
-  - `git clone https://github.com/johannesbrandenburger/typst-mcp.git`
-- Clone the [typst repository](https://github.com/typst/typst.git)
-  - `git clone https://github.com/typst/typst.git`
-- Run the docs generation in the typst repository
-  - `cargo run --package typst-docs -- --assets-dir ../typst-mcp/typst-docs --out-file ../typst-mcp/typst-docs/main.json`
-    - Make sure to adjust the path to your local clone of the typst-mcp repository
-    - This will generate the `main.json` and the assets in the `typst-docs` folder
-- Install required dependencies: `uv sync` (install [uv](https://github.com/astral-sh/uv) if not already installed)
-  
-- Install Typst
+### Prerequisites
+
+- Python 3.12 or higher
+- [uv](https://github.com/astral-sh/uv) package manager (or pip)
+- [Typst](https://github.com/typst/typst) CLI tool installed and available in PATH
+- [Pandoc](https://pandoc.org/) installed and available in PATH
+
+### Installation
+
+1. Clone this repository
+   ```bash
+   git clone https://github.com/johannesbrandenburger/typst-mcp.git
+   ```
+
+2. Install required Python dependencies:
+   ```bash
+   uv sync
+   ```
+   Or with pip:
+   ```bash
+   pip install -e .
+   ```
+
+3. **(Optional)** Generate Typst documentation (required for documentation-related tools):
+   - Clone the [typst repository](https://github.com/typst/typst.git)
+   - Run the docs generation:
+     ```bash
+     cargo run --package typst-docs -- --assets-dir ../typst-mcp/typst-docs --out-file ../typst-mcp/typst-docs/main.json
+     ```
+     Make sure to adjust the path to your local clone of the typst-mcp repository
+   - This will generate the `main.json` and the assets in the `typst-docs` folder
+   
+   > **Note:** The server will start successfully even without the documentation file, but documentation-related tools (`list_docs_chapters`, `get_docs_chapter`) will return error messages until the documentation is generated.
 
 ## Running the Server
+
+### Basic Usage
 
 Execute the server script:
 
@@ -50,13 +74,30 @@ Execute the server script:
 python server.py
 ```
 
-Or install it in Claude Desktop with MCP:
+The server will automatically check for required external dependencies (`pandoc` and `typst`) at startup and display an error if they are missing.
+
+### Configuration
+
+#### Custom Temporary Directory
+
+You can specify a custom directory for temporary files using the `TYPST_MCP_TEMP_DIR` environment variable:
+
+```bash
+export TYPST_MCP_TEMP_DIR=/path/to/custom/temp/dir
+python server.py
+```
+
+If not set, a temporary directory will be created automatically. The custom directory will be created if it doesn't exist.
+
+### Integration with MCP Clients
+
+#### Claude Desktop
 
 ```bash
 mcp install server.py
 ```
 
-Or use the new agent mode in VS Code:
+#### VS Code Agent Mode
 
 [Agent mode: available to all users and supports MCP](https://code.visualstudio.com/blogs/2025/04/07/agentMode)
 
