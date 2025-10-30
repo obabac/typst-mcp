@@ -11,6 +11,44 @@ temp_dir = tempfile.mkdtemp()
 
 mcp = FastMCP("Typst MCP Server")
 
+def check_external_dependencies():
+    """
+    Checks if required external dependencies (pandoc, typst) are available.
+    Raises RuntimeError if any dependency is missing.
+    """
+    missing_deps = []
+    
+    # Check for pandoc
+    try:
+        subprocess.run(
+            ["pandoc", "--version"],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        missing_deps.append("pandoc")
+    
+    # Check for typst
+    try:
+        subprocess.run(
+            ["typst", "--version"],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        missing_deps.append("typst")
+    
+    if missing_deps:
+        raise RuntimeError(
+            f"Missing required external dependencies: {', '.join(missing_deps)}. "
+            f"Please install them before running the server. "
+            f"See README.md for installation instructions."
+        )
+
 # load the typst docs JSON file
 raw_typst_docs = ""
 with open(os.path.join(os.path.dirname(__file__), "typst-docs", "main.json"), "r", encoding="utf-8") as f:
@@ -213,7 +251,7 @@ def latex_snippets_to_typst(latex_snippets: list) -> str:
     if not isinstance(latex_snippets, list):
         try:
             latex_snippets = json.loads(latex_snippets)
-        except:
+        except (json.JSONDecodeError, TypeError):
             pass
     
     for snippet in latex_snippets:
@@ -282,7 +320,7 @@ def check_if_snippets_are_valid_typst_syntax(typst_snippets: list) -> str:
     if not isinstance(typst_snippets, list):
         try:
             typst_snippets = json.loads(typst_snippets)
-        except:
+        except (json.JSONDecodeError, TypeError):
             pass
     
     for snippet in typst_snippets:
@@ -418,5 +456,7 @@ def typst_snippet_to_image(typst_snippet) -> Image | str:
         return f"ERROR: in typst_to_image. Failed to convert typst to image. Error message from typst: {error_message}"
 
 if __name__ == "__main__":
-
+    # Check dependencies before starting the server
+    check_external_dependencies()
+    
     mcp.run()
